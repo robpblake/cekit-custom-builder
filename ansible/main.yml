@@ -1,0 +1,42 @@
+---
+- hosts: all
+  become: yes
+  vars_files:
+    - vars/subscription-manager.yml
+  tasks:
+    - name: Increase maximum number of open files (soft)
+      pam_limits:
+        backup: yes
+        domain: '*'
+        limit_item: 'nofile'
+        limit_type: 'soft'
+        value: '20480'
+
+    - name: Increase maximum number of open files (hard)
+      pam_limits:
+        backup: yes
+        domain: '*'
+        limit_item: 'nofile'
+        limit_type: 'hard'
+        value: '40960'
+
+    - name: Set max_user_namespaces sysctl configuration
+      shell: "echo 15000 > /proc/sys/user/max_user_namespaces"
+
+    - name: Register the system with subscription-manager
+      shell: "subscription-manager register --force --username '{{ subscription_user }}' --password '{{ subscription_password }}' --auto-attach && touch /root/subscription.manager.do.not.delete"
+      args:
+        creates: '/root/subscription.manager.do.not.delete'
+
+    - name: Enable the rhel-7-server-rpms and rhel-7-server-extras-rpms repos
+      shell: 'subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms && touch /root/rhel-7-server-rpms.do.not.delete'
+      args:
+        creates: '/root/rhel-7-server-rpms.do.not.delete'
+
+    - name: Install Buildah and other required packages
+      yum:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - buildah

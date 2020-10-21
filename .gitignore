@@ -1,0 +1,3 @@
+.idea
+.vagrant
+ansible/vars/subscription-manager.yml
